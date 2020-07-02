@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from "react";
-import logo from "./logo.svg";
 import { Map, TileLayer, Marker, Popup } from "react-leaflet";
+import uniqBy from "lodash.uniqby";
 import "./App.css";
 
 const useDebouncedEffect = (effect, delay, deps) => {
@@ -44,7 +44,14 @@ const App = () => {
         `https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?f=json&singleLine=${searchAddress}&outFields=Match_addr,Addr_type`
       );
       const data = await response.json();
-      setSearchSuggestions(data?.candidates ?? []);
+      const results = uniqBy(
+        (data?.candidates ?? []).map(candidate => ({
+          ...candidate,
+          key: `${candidate.location?.y ?? 0} ${candidate.location?.x ?? 0}`
+        })),
+        "key"
+      );
+      setSearchSuggestions(results);
     } catch (err) {
       console.error(err);
     }
@@ -79,8 +86,7 @@ const App = () => {
                   <li
                     title={`Address: ${candidate.address}, location: ${candidate
                       .location?.y ?? 0}, ${candidate.location?.x ?? 0}`}
-                    key={`Address: ${candidate.address}, location: ${candidate
-                      .location?.y ?? 0}, ${candidate.location?.x ?? 0}`}
+                    key={candidate.key}
                   >
                     <button
                       onClick={() => {
